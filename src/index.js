@@ -23,15 +23,16 @@ db.authenticate()
 async function migrateData() {
   await Employee.sync();
   const exportedData = await getEmployeesData();
+  console.log(exportedData)
   try{
-    await client.connect();
+    await client.connect(); //TODO verificar se dado já não existe no banco
     const db = client.db('M2')
     const collection = db.collection('Employees')
 
     await collection.insertMany(exportedData)
     console.log('deu certo')
-  }catch{
-    console.log('nao deu certo')
+  }catch(error){
+    console.log(error)
     await client.close()
   }
 }

@@ -1,4 +1,4 @@
-const {Op, literal } = require("sequelize");
+const { Op, literal } = require("sequelize");
 const {
     Employee,
     Salary,
@@ -7,10 +7,10 @@ const {
     DeptEmp,
     DeptManager,
 } = require("../database/Models/associations");
+const client = require('../database/Connection/mongodb')
 
 async function getEmployeesData() {
     await Employee.sync();
-
     try {
         const employees = await Employee.findAll({
             include: [
@@ -41,15 +41,13 @@ async function getEmployeesData() {
 
         const dataJson = [];
         employees.forEach((employee) => dataJson.push(transformData(employee)));
-
-        return dataJson;
+        return filterDuplicatedData(dataJson); //TODO: colocar no main
     } catch (err) {
         throw err;
     }
 }
+
 function transformData(employee) {
-    console.log(
-        employee.DeptManagers[0].emp_no)
 
     const transformedEmployee = {
         emp_no: employee.emp_no,
@@ -73,13 +71,7 @@ function transformData(employee) {
             from_date: deptEmp.from_date,
             to_date: deptEmp.to_date,
         })),
-       /* deptManager: employee.DeptManagers.map((manager) => ({
-            dept_no: manager.dept_no,
-            emp_no: manager.emp_no,
-            from_date: manager.from_date,
-            to_date: manager.to_date
-        }))*/
-         deptManager: {
+        deptManager: {
             dept_no: employee.DeptManagers[0].dept_no,
             emp_no: employee.DeptManagers[0].emp_no,
             from_date: employee.DeptManagers[0].from_date,
@@ -87,6 +79,28 @@ function transformData(employee) {
         }
     };
     return transformedEmployee;
+}
+
+async function filterDuplicatedData(employee) {
+    
+    const newValues = []
+
+    for (const element of employee) {
+        try {
+            await client.connect(); //TODO verificar se dado já não existe no banco
+            const db = client.db('M2')
+            const collection = db.collection('Employees')
+            const employeeExists = await collection.findOne({ emp_no: element.emp_no });
+            if (!employeeExists) {
+                newValues.push(element);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+    await client.close()
+    return newValues;
+
 }
 
 getEmployeesData()
