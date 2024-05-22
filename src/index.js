@@ -1,15 +1,7 @@
-const {
-  Employee,
-  Salary,
-  Title,
-  DeptManager,
-  Department,
-  DeptEmp,
-} = require("./database/Models/associations.js");
 const db = require("./database/Connection/mysql.js");
 const client = require('.//database/Connection/mongodb.js')
-const { getEmployeesData } = require("./scripts/functions.js");
-const { MongoClient } = require('mongodb');
+const { getEmployeesData, filterDuplicatedData } = require("./scripts/functions.js");
+const Employee = require("./database/Models/employee.js");
 
 db.authenticate()
   .then(() => {
@@ -23,17 +15,31 @@ db.authenticate()
 async function migrateData() {
   await Employee.sync();
   const exportedData = await getEmployeesData();
-  console.log(exportedData)
+
+  if(exportedData.length === 0){
+    console.log("No data to insert! ", exportedData)
+    return 
+  }
+  const filteredData = await filterDuplicatedData(exportedData);
+
+  if (filteredData.length === 0) {
+      console.log("No new data to insert");
+      return;
+  }
+
+  console.log(`Exported ${exportedData.length} employees`);
+
   try{
     await client.connect(); //TODO verificar se dado já não existe no banco
     const db = client.db('M2')
     const collection = db.collection('Employees')
 
     await collection.insertMany(exportedData)
-    console.log('deu certo')
-  }catch(error){
-    console.log(error)
-    await client.close()
+    console.log('Data insertion successful');
+  } catch (error) {
+    console.error('Error during data migration:', error);
+  } finally {
+    await client.close();
   }
 }
 
