@@ -24,10 +24,10 @@ async function getEmployeesData() {
                             model: Department,
                             attributes: ["dept_no", "dept_name"],
                         },
-                    ],
+                    ]
                 },
             ],
-            limit: 1
+            limit: 100
         });
         const dataJson = [];
         //  employees.forEach((employee) => dataJson.push(transformData(employee)));
@@ -111,22 +111,30 @@ async function getLastDepartment(emp_no = 10010) {
     return deptEmp ? deptEmp.Department : null;
 }
 
-
 async function getManagerOfDepartment(dept_no = 'd006') {
     const currentManager = await DeptManager.findOne({
         where: { dept_no },
         order: [['to_date', 'DESC']],
     });
     //TODO: escolher método , FORMAA 1 
-    console.log('debug forma 1: \n', currentManager.toJSON())
+  //  console.log('debug forma 1: \n', currentManager.toJSON())
 
     //forma 2
     const deptManager = await Employee.findOne({ where: { emp_no: currentManager.emp_no } })
     if (!deptManager) {
         return null
     }
-    console.log('debug forma 2, \n', deptManager.toJSON())
-    return currentManager.toJSON()
+    const managerJSON = deptManager.toJSON()
+
+    //TODO verificar se precisa disso
+    const finalData = {
+        first_name: managerJSON.first_name,
+        last_name: managerJSON.last_name,
+        gender: 'F',
+        ...currentManager.toJSON()
+    }
+
+    return deptManager.toJSON()
 
     return currentManager ? await Employee.findOne({ where: { emp_no: currentManager.emp_no } }) : null;
 }

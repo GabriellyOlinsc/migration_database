@@ -21,20 +21,19 @@ async function migrateData() {
     return 
   }
   const filteredData = await filterDuplicatedData(exportedData);
-
   if (filteredData.length === 0) {
       console.log("No new data to insert");
       return;
   }
 
-  console.log(`Exported ${exportedData.length} employees`);
+  console.log(`Exported ${filteredData.length} employees`);
 
   try{
     await client.connect(); //TODO verificar se dado já não existe no banco
     const db = client.db('M2')
     const collection = db.collection('Employees')
 
-    await collection.insertMany(exportedData)
+    await collection.insertMany(filteredData)
     console.log('Data insertion successful');
   } catch (error) {
     console.error('Error during data migration:', error);
