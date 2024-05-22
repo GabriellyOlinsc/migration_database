@@ -26,22 +26,22 @@ async function getEmployeesData() {
                         },
                     ],
                 },
-                {
-                    model: DeptManager,
-                    attributes: ["emp_no", "dept_no", "from_date", "to_date"],  //TODO achar uma maneira de não inserir como um array
-                    where: {
-                        to_date: {
-                            [Op.gt]: literal("NOW()"),
-                        },
-                    },
-                },
             ],
-            limit: 10,
+            limit: 1
         });
-
         const dataJson = [];
-        employees.forEach((employee) => dataJson.push(transformData(employee)));
-        return filterDuplicatedData(dataJson); //TODO: colocar no main
+        //  employees.forEach((employee) => dataJson.push(transformData(employee)));
+
+        for (const employee of employees) {
+            const employeeData = transformData(employee);
+            const lastDepartment = await getLastDepartment(employee.emp_no);
+            if (lastDepartment) {
+                const manager = await getManagerOfDepartment(lastDepartment.dept_no);
+                employeeData.manager = manager;
+            }
+            dataJson.push(employeeData);
+        }       
+        return dataJson;
     } catch (err) {
         throw err;
     }
@@ -71,37 +71,64 @@ function transformData(employee) {
             from_date: deptEmp.from_date,
             to_date: deptEmp.to_date,
         })),
-        deptManager: {
-            dept_no: employee.DeptManagers[0].dept_no,
-            emp_no: employee.DeptManagers[0].emp_no,
-            from_date: employee.DeptManagers[0].from_date,
-            to_date: employee.DeptManagers[0].to_date
-        }
     };
     return transformedEmployee;
 }
 
 async function filterDuplicatedData(employee) {
-    
     const newValues = []
 
-    for (const element of employee) {
-        try {
-            await client.connect(); //TODO verificar se dado já não existe no banco
-            const db = client.db('M2')
-            const collection = db.collection('Employees')
-            const employeeExists = await collection.findOne({ emp_no: element.emp_no });
-            if (!employeeExists) {
-                newValues.push(element);
+    try {
+        await client.connect(); 
+        const db = client.db('M2');
+        const collection = db.collection('Employees');
+
+        for (const element of employee) {
+            try {
+                const employeeExists = await collection.findOne({ emp_no: element.emp_no });
+                if (!employeeExists) {
+                    newValues.push(element);
+                }
+            } catch (error) {
+                console.error('Error finding employee:', error);
             }
-        } catch (error) {
-            console.error('Error:', error);
         }
+    } catch (connectionError) {
+        console.error('Error connecting to MongoDB:', connectionError);
+    } finally {
+        await client.close(); 
     }
-    await client.close()
     return newValues;
 
 }
 
+async function getLastDepartment(emp_no = 10010) {
+    const deptEmp = await DeptEmp.findOne({
+        where: { emp_no },
+        order: [['to_date', 'DESC']],
+        include: [{ model: Department, attributes: ["dept_no", "dept_name"] }],
+    });
+    return deptEmp ? deptEmp.Department : null;
+}
+
+
+async function getManagerOfDepartment(dept_no = 'd006') {
+    const currentManager = await DeptManager.findOne({
+        where: { dept_no },
+        order: [['to_date', 'DESC']],
+    });
+    //TODO: escolher método , FORMAA 1 
+    console.log('debug forma 1: \n', currentManager.toJSON())
+
+    //forma 2
+    const deptManager = await Employee.findOne({ where: { emp_no: currentManager.emp_no } })
+    if (!deptManager) {
+        return null
+    }
+    console.log('debug forma 2, \n', deptManager.toJSON())
+    return currentManager.toJSON()
+
+    return currentManager ? await Employee.findOne({ where: { emp_no: currentManager.emp_no } }) : null;
+}
 getEmployeesData()
-module.exports = { getEmployeesData };
+module.exports = { getEmployeesData, filterDuplicatedData };
