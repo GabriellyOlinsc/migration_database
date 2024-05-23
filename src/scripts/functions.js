@@ -1,4 +1,3 @@
-const { Op, literal } = require("sequelize");
 const {
     Employee,
     Salary,
@@ -24,14 +23,13 @@ async function getEmployeesData() {
                             model: Department,
                             attributes: ["dept_no", "dept_name"],
                         },
-                    ] 
+                    ],
+                 
                 },
             ],
-            limit: 1
+            limit: 300
         });
         const dataJson = [];
-        //  employees.forEach((employee) => dataJson.push(transformData(employee)));
-
         for (const employee of employees) {
             const employeeData = transformData(employee);
             const lastDepartment = await getLastDepartment(employee.emp_no);
@@ -102,7 +100,7 @@ async function filterDuplicatedData(employee) {
 
 }
 
-async function getLastDepartment(emp_no = 10010) {
+async function getLastDepartment(emp_no) {
     const deptEmp = await DeptEmp.findOne({
         where: { emp_no },
         order: [['to_date', 'DESC']],
@@ -111,32 +109,26 @@ async function getLastDepartment(emp_no = 10010) {
     return deptEmp ? deptEmp.Department : null;
 }
 
-async function getManagerOfDepartment(dept_no = 'd006') {
+async function getManagerOfDepartment(dept_no) {
     const currentManager = await DeptManager.findOne({
         where: { dept_no },
         order: [['to_date', 'DESC']],
     });
-    //TODO: escolher método , FORMAA 1 
-  //  console.log('debug forma 1: \n', currentManager.toJSON())
 
-    //forma 2
     const deptManager = await Employee.findOne({ where: { emp_no: currentManager.emp_no } })
     if (!deptManager) {
         return null
     }
     const managerJSON = deptManager.toJSON()
 
-    //TODO verificar se precisa disso
     const finalData = {
         first_name: managerJSON.first_name,
         last_name: managerJSON.last_name,
-        gender: 'F',
+        gender: managerJSON.gender,
         ...currentManager.toJSON()
     }
-    console.log(currentManager.toJSON())
-    return finalData; //ou current
-
-    return currentManager ? await Employee.findOne({ where: { emp_no: currentManager.emp_no } }) : null;
+    return finalData; 
 }
 getEmployeesData()
+
 module.exports = { getEmployeesData, filterDuplicatedData };

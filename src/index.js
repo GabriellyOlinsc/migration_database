@@ -11,7 +11,6 @@ db.authenticate()
     console.error("Unable to connect to the database: ", error);
   });
 
-  //TODO: organizar main
 async function migrateData() {
   await Employee.sync();
   const exportedData = await getEmployeesData();
@@ -29,7 +28,7 @@ async function migrateData() {
   console.log(`Exported ${filteredData.length} employees`);
 
   try{
-    await client.connect(); //TODO verificar se dado já não existe no banco
+    await client.connect(); 
     const db = client.db('M2')
     const collection = db.collection('Employees')
 
