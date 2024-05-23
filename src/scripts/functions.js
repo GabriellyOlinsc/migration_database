@@ -24,10 +24,10 @@ async function getEmployeesData() {
                             model: Department,
                             attributes: ["dept_no", "dept_name"],
                         },
-                    ]
+                    ] 
                 },
             ],
-            limit: 100
+            limit: 1
         });
         const dataJson = [];
         //  employees.forEach((employee) => dataJson.push(transformData(employee)));
@@ -133,8 +133,8 @@ async function getManagerOfDepartment(dept_no = 'd006') {
         gender: 'F',
         ...currentManager.toJSON()
     }
-
-    return deptManager.toJSON()
+    console.log(currentManager.toJSON())
+    return finalData; //ou current
 
     return currentManager ? await Employee.findOne({ where: { emp_no: currentManager.emp_no } }) : null;
 }
